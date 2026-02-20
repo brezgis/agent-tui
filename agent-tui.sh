@@ -1,11 +1,11 @@
 #!/bin/bash
-# oc-chat.sh — Talk to any OpenClaw agent from your terminal
+# agent-tui.sh — Talk to any OpenClaw agent from your terminal
 #
 # Supports both local and remote (SSH) OpenClaw instances.
 # Messages are prefixed with [terminal] so agents can detect
 # the medium and adjust formatting (no markdown in terminals).
 #
-# Usage: ./oc-chat.sh [options]
+# Usage: ./agent-tui.sh [options]
 #   -a, --agent NAME      Agent name (default: main)
 #   -s, --server HOST     SSH host for remote OpenClaw (default: localhost)
 #   -c, --color HEX       Hex color for agent responses (default: d97757)
@@ -14,10 +14,10 @@
 #   -h, --help            Show this help
 #
 # Examples:
-#   ./oc-chat.sh                              # local main agent
-#   ./oc-chat.sh -a tutor -s myserver         # remote tutor agent
-#   ./oc-chat.sh -a main -s north -c d97757   # remote, custom color
-#   ./oc-chat.sh -a main -n claude            # custom display name
+#   ./agent-tui.sh                              # local main agent
+#   ./agent-tui.sh -a tutor -s myserver         # remote tutor agent
+#   ./agent-tui.sh -a main -s myserver -c d97757   # remote, custom color
+#   ./agent-tui.sh -a main -n claude            # custom display name
 #
 # Environment:
 #   OPENCLAW    Path to openclaw binary (default: openclaw)
@@ -25,6 +25,13 @@
 #               export OPENCLAW=/home/user/.nvm/versions/node/v22/bin/openclaw
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Prefer Python version if prompt_toolkit is available (word-wrapped input)
+if python3 -c "from prompt_toolkit import prompt" 2>/dev/null; then
+  exec python3 "$SCRIPT_DIR/agent-tui.py" "$@"
+fi
 
 # Defaults
 AGENT="main"
@@ -42,7 +49,7 @@ while [[ $# -gt 0 ]]; do
     -n|--name) DISPLAY_NAME="$2"; shift 2 ;;
     --no-tag) TAG_MESSAGES=false; shift ;;
     -h|--help)
-      echo "Usage: oc-chat.sh [options]"
+      echo "Usage: agent-tui.sh [options]"
       echo ""
       echo "Talk to any OpenClaw agent from your terminal."
       echo ""
@@ -55,10 +62,10 @@ while [[ $# -gt 0 ]]; do
       echo "  -h, --help            Show this help"
       echo ""
       echo "Examples:"
-      echo "  oc-chat.sh                                # local main agent"
-      echo "  oc-chat.sh -a tutor -s myserver           # remote tutor via SSH"
-      echo "  oc-chat.sh -a main -s north -c 36b5a0     # custom color"
-      echo "  oc-chat.sh -a main -n claude              # custom display name"
+      echo "  agent-tui.sh                                # local main agent"
+      echo "  agent-tui.sh -a tutor -s myserver           # remote tutor via SSH"
+      echo "  agent-tui.sh -a main -s myserver -c 36b5a0     # custom color"
+      echo "  agent-tui.sh -a main -n claude              # custom display name"
       echo ""
       echo "Environment:"
       echo "  OPENCLAW    Path to openclaw binary (default: openclaw)"
@@ -131,8 +138,7 @@ send_message() {
 
 # Main loop
 while true; do
-  echo -ne "${GREEN}you → ${RESET}"
-  read -r msg || break  # handle EOF (Ctrl+D)
+  read -e -r -p $'\033[32myou → \033[0m' msg || break  # handle EOF (Ctrl+D)
   if [ -z "$msg" ]; then continue; fi
   if [[ "$msg" == "quit" || "$msg" == "exit" || "$msg" == "bye" ]]; then
     echo -e "${DIM}See you later.${RESET}"
@@ -142,8 +148,15 @@ while true; do
   echo ""
   response=$(send_message "$msg")
   if [ -n "$response" ]; then
-    echo -e "${AGENT_COLOR}${LABEL} →${RESET} $(echo "$response" | head -1)"
-    echo "$response" | tail -n +2 | sed "s/^/    /"
+    # Word-wrap at terminal width, break at spaces not mid-word
+    WRAP_WIDTH="${COLUMNS:-80}"
+    echo "$response" | fold -s -w "$WRAP_WIDTH" | {
+      read -r first_line
+      echo -e "${AGENT_COLOR}${LABEL} →${RESET} $first_line"
+      while IFS= read -r line; do
+        echo "    $line"
+      done
+    }
   else
     echo -e "${DIM}(no response — check connection)${RESET}"
   fi
