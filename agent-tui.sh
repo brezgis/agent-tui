@@ -28,7 +28,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Prefer Python version if prompt_toolkit is available (word-wrapped input)
+# Prefer Textual TUI if available (rich UI with spinner, Catppuccin theme)
+if python3 -c "from textual.app import App" 2>/dev/null; then
+  exec python3 "$SCRIPT_DIR/agent-tui-textual.py" "$@"
+fi
+
+# Fall back to prompt_toolkit version (word-wrapped input)
 if python3 -c "from prompt_toolkit import prompt" 2>/dev/null; then
   exec python3 "$SCRIPT_DIR/agent-tui.py" "$@"
 fi

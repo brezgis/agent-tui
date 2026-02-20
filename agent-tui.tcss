@@ -1,0 +1,46 @@
+/* Catppuccin Mocha theme for agent-tui */
+
+Screen {
+    background: #1e1e2e;
+}
+
+#header {
+    dock: top;
+    height: 3;
+    background: #1e1e2e;
+    color: #cdd6f4;
+    padding: 0 1;
+}
+
+#chat {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border: none;
+    scrollbar-size-vertical: 0;
+    margin: 0 1;
+}
+
+#spinner {
+    height: 1;
+    background: #1e1e2e;
+    color: #6c7086;
+    margin: 0 1;
+    display: none;
+}
+
+#input {
+    height: 4;
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border: solid #313244;
+    margin: 0 1 0 1;
+    scrollbar-size-vertical: 0;
+}
+
+#input:focus {
+    border: solid #b4befe;
+}
+
+TextArea > .text-area--cursor-line {
+    background: #1e1e2e;
+}
